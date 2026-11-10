@@ -30,7 +30,7 @@ from anndata import AnnData
 from scipy.sparse import issparse
 from sklearn.model_selection import train_test_split
 
-from ._cellot import ICNN, compute_loss_f, compute_loss_g, compute_scalar_mmd, uniform_init
+from ._cellot import ICNN, compute_loss_f, compute_loss_g, compute_scalar_mmd, compute_w2_distance, uniform_init
 
 FIT_DEFAULTS = dict(
     n_pcs=100,
@@ -98,6 +98,8 @@ def fit_map(
     device=None,
     log_fn: Callable[[str], None] | None = print,
     log_every: int = 1000,
+    history_path: str | Path | None = None,
+    map_name: str = "map",
     **params,
 ):
     """Train one CellOT map (source -> control) on PCA coordinates.
@@ -106,6 +108,8 @@ def fit_map(
     is_source  bool mask; False = control (CellOT 'target')
     split      'train' / 'test' per cell (see :func:`split_train_test`); None = unused
 
+    history_path  CSV that gets one row per evaluation (map, step, g_loss, f_loss, w2, test_mmd),
+                  appended while training, e.g. to follow the run from another notebook
     Returns (g_state_dict, info) with the lowest-test-MMD g.
     """
     unknown = set(params) - set(FIT_DEFAULTS)
@@ -160,7 +164,12 @@ def fit_map(
             s_te = next(it[("test", "source")]).to(device).requires_grad_(True)
             tr = g.transport(s_te).detach()
             mmd = compute_scalar_mmd(t_te.cpu().numpy(), tr.cpu().numpy())
-            history.append((step, float(mmd)))
+            row = {"map": map_name, "step": step, "g_loss": gl.item(), "f_loss": fl.item(),
+                   "w2": float(compute_w2_distance(f, g, s_te, t_te, tr)), "test_mmd": float(mmd)}
+            history.append(row)
+            if history_path:
+                pd.DataFrame([row]).to_csv(history_path, mode="a", index=False,
+                                           header=not Path(history_path).exists())
             if mmd < best:
                 best, best_step = mmd, step
                 best_state = {k: v.detach().cpu().clone() for k, v in g.state_dict().items()}
@@ -211,6 +220,7 @@ class CellOT:
         seed: int | None = 0,
         device=None,
         log_fn: Callable[[str], None] | None = print,
+        history_path: str | Path | None = None,
         **params,
     ) -> "CellOT":
         """Fit the PCA and one CellOT map per source condition.
@@ -222,6 +232,7 @@ class CellOT:
         split_key       obs column whose groups are split 80/20 separately
                         (default ``condition_key``; the Parse-PBMC map used 'cytokine')
         seed            torch seed set before each map (CellOT itself sets none)
+        history_path    CSV with the training curves, appended at each evaluation (see :attr:`history`)
         params          overrides of :data:`FIT_DEFAULTS` (e.g. n_pcs, n_iters, batch_size)
 
         The PCA is fitted on control and source cells together, as in the paper.
@@ -249,6 +260,8 @@ class CellOT:
 
         if p["n_pcs"] > min(X.shape):
             raise ValueError(f"n_pcs={p['n_pcs']} exceeds min(n_cells, n_features)={min(X.shape)}")
+        if log_fn:
+            log_fn(f"PCA on {X.shape[0]} cells ...")
         pca = PCA(n_components=p["n_pcs"], random_state=p["split_seed"])
         Xp = pca.fit_transform(X).astype(np.float32)
         if log_fn:
@@ -262,6 +275,7 @@ class CellOT:
                 log_fn(f"CellOT {s} -> {control_label}: {int((cond == s).sum())} source, "
                        f"{int((cond == control_label).sum())} control cells")
             maps[s], info[s] = fit_map(Xp[m], cond[m] == s, split, seed=seed, device=device, log_fn=log_fn,
+                                       history_path=history_path, map_name=s,
                                        **{k: v for k, v in p.items() if k not in ("n_pcs",)})
             if log_fn:
                 log_fn(f"  kept step {info[s]['best_step']} (test MMD {info[s]['min_mmd']:.5f})")
@@ -273,6 +287,12 @@ class CellOT:
         return cls(pca.components_, pca.mean_, maps, config, info, device=device)
 
     # ---------------------------------------------------------------- transport
+    @property
+    def history(self) -> pd.DataFrame:
+        """Training curves of the maps fitted in this session (one row per evaluation; not saved to file)."""
+        rows = [r for v in self.info.values() for r in v.get("history", [])]
+        return pd.DataFrame(rows, columns=["map", "step", "g_loss", "f_loss", "w2", "test_mmd"])
+
     @property
     def source_labels(self):
         return list(self.maps)

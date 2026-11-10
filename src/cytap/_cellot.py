@@ -111,3 +111,13 @@ def compute_scalar_mmd(target, transport, gammas=(2, 1, 0.5, 0.1, 0.01, 0.005)):
         except ValueError:
             return np.nan
     return np.mean([safe(g) for g in gammas])
+
+
+def compute_w2_distance(f, g, source, target, transport=None):
+    """CellOT's estimate of the squared W2 distance (reported as 'jloss' during evaluation)."""
+    if transport is None:
+        transport = g.transport(source).squeeze()
+    with torch.no_grad():
+        Cpq = 0.5 * ((source * source).sum(1, keepdim=True) + (target * target).sum(1, keepdim=True))
+        cost = f(transport) - torch.multiply(source, transport).sum(-1, keepdim=True) - f(target) + Cpq
+    return cost.mean()

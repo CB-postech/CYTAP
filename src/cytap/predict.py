@@ -244,6 +244,9 @@ def _cellot_counterfactual(adata, counterfactual, cellot_kwargs, *, embed_key, c
     untrained = sorted(set(cond[need]) - set(cot.source_labels))
     if untrained:
         warnings.warn(f"no CellOT map for {untrained}; those cells use the pooled c_k fallback")
+    log = kw.get("log_fn", print)
+    if log:
+        log(f"Transporting {int(need.sum())} cells of donor x cell-type groups without controls ...")
     cf = cot.transport(adata, embed_key=embed_key, condition_key=control_key, mask=need)
     info = {"source_labels": cot.source_labels, "n_transported": int(cf.n_obs),
             "n_pcs": int(cot.components.shape[0]),
