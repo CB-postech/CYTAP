@@ -160,10 +160,13 @@ def paired_delta(
         if t not in wide.columns:
             continue
         d = (wide[t] - wide[baseline]).dropna().reset_index(name="delta")
+        if d.empty:
+            continue
         d["condition"] = t
         parts.append(d)
     if not parts:
-        raise ValueError("no donor has both baseline and target conditions")
+        raise ValueError(f"no donor has both '{baseline}' and {targets} in '{condition_key}'; paired_delta needs "
+                         "repeated samples per donor (for groups of different donors use response/compare_conditions)")
     out = pd.concat(parts, ignore_index=True)[["group", "donor", "condition", "delta"]]
     out["condition"] = pd.Categorical(out["condition"], categories=targets, ordered=True)
     return out

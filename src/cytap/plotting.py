@@ -53,11 +53,24 @@ def lollipop(res: pd.DataFrame, x: str = "delta_logit", top_n: int = 10, fdr: fl
 
 def response(adata: AnnData, cytokine: str, donor_key: str, condition_key: str,
              celltype_key: str | None = None, *, conditions: Sequence[str] | None = None,
-             value: str = "logit", colors: Sequence[str] | None = None, ax=None, **kw):
-    """Per-donor median logit of one cytokine by condition (and cell type)."""
+             baseline: str | None = None, value: str = "logit", colors: Sequence[str] | None = None,
+             ax=None, **kw):
+    """Per-donor median logit of one cytokine by condition (and cell type).
+
+    With ``baseline`` (e.g. the control group), each value is shown relative to the mean of the
+    ``baseline`` donors of the same cell type. Use this to compare cell types: the absolute logit of
+    control cells is a cell-type-specific default of the classifier, not a response, so absolute levels
+    are comparable only within a cell type.
+    """
     df = stats.pseudobulk(adata, donor_key, condition_key, celltype_key, cytokines=[cytokine],
                        conditions=conditions, value=value, **kw)
     conds = list(conditions) if conditions is not None else sorted(df[condition_key].astype(str).unique())
+    if baseline is not None:
+        if baseline not in conds:
+            raise ValueError(f"baseline '{baseline}' not among the conditions {conds}")
+        grp = df[celltype_key].astype(str) if celltype_key else pd.Series("All Cells", index=df.index)
+        ref = df[df[condition_key].astype(str) == baseline].groupby(grp, observed=True)[cytokine].mean()
+        df = df.assign(**{cytokine: df[cytokine] - grp.map(ref).astype(float)}).dropna(subset=[cytokine])
     groups = sorted(df[celltype_key].astype(str).unique()) if celltype_key else ["All Cells"]
     colors = colors or plt.cm.tab10.colors
     ax = _ax(ax, (max(4, 1.2 * len(groups) * len(conds) / 2), 4))
@@ -71,7 +84,11 @@ def response(adata: AnnData, cytokine: str, donor_key: str, condition_key: str,
         _box_points(ax, [vals[i] for i in keep], pos[keep], colors[j % len(colors)], w * 0.9, seed=j)
         ax.plot([], [], "s", color=colors[j % len(colors)], label=c)
     ax.set_xticks(np.arange(len(groups)), groups, rotation=45 if len(groups) > 2 else 0, ha="right" if len(groups) > 2 else "center")
-    ax.set_ylabel(f"Median {value} ({cytokine})")
+    if baseline is not None:
+        ax.axhline(0, color="red", ls="--", alpha=0.5)
+        ax.set_ylabel(f"Δ median {value} vs {baseline} mean ({cytokine})")
+    else:
+        ax.set_ylabel(f"Median {value} ({cytokine})")
     ax.legend(frameon=False, bbox_to_anchor=(1.01, 1), loc="upper left")
     return ax
 
