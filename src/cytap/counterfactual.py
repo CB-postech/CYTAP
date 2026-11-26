@@ -5,11 +5,8 @@ condition s onto the distribution of control cells. Transported cells are decode
 embedding with the inverse PCA and used as donor-matched controls in
 ``cytap.predict(design="unpaired", reference="counterfactual")``.
 
-The training loop reproduces CellOT ``train_cellot`` (Bunne et al., Nat. Methods 2023) with the
-settings used in the CYTAP paper (configs/*_cellot.yaml): ICNN f, g with 4 x 64 hidden units,
-U(0, 0.1) initialisation, fnorm penalty 1 on g, Adam(lr 1e-4, betas (0.5, 0.9)), 10 g-steps per
-f-step, 10,000 iterations, 80/20 train/test split per group (random_state 0), and the g with the
-lowest test MMD (evaluated every 100 iterations) is kept.
+The training loop reproduces CellOT ``train_cellot`` (Bunne et al., Nat. Methods 2023);
+:data:`FIT_DEFAULTS` are the settings used in the CYTAP paper. The g with the lowest test MMD is kept.
 
     cf_model = cytap.counterfactual.CellOT.fit(adata, condition_key="Source", control_label="HV")
     cf_model.save("combat_cellot.pt")
@@ -108,8 +105,8 @@ def fit_map(
     is_source  bool mask; False = control (CellOT 'target')
     split      'train' / 'test' per cell (see :func:`split_train_test`); None = unused
 
-    history_path  CSV that gets one row per evaluation (map, step, g_loss, f_loss, w2, test_mmd),
-                  appended while training, e.g. to follow the run from another notebook
+    history_path  CSV with one row per evaluation (map, step, g_loss, f_loss, w2, test_mmd),
+                  appended while training
     Returns (g_state_dict, info) with the lowest-test-MMD g.
     """
     unknown = set(params) - set(FIT_DEFAULTS)
@@ -230,7 +227,7 @@ class CellOT:
         source_labels   conditions to map to control (default: all other values)
         embed_key       obsm key of the embedding (None = ``.X``)
         split_key       obs column whose groups are split 80/20 separately
-                        (default ``condition_key``; the Parse-PBMC map used 'cytokine')
+                        (default ``condition_key``)
         seed            torch seed set before each map (CellOT itself sets none)
         history_path    CSV with the training curves, appended at each evaluation (see :attr:`history`)
         params          overrides of :data:`FIT_DEFAULTS` (e.g. n_pcs, n_iters, batch_size)
