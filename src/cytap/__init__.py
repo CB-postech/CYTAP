@@ -1,4 +1,3 @@
-"""CYTAP: cytokine response prediction by adapting pretrained embeddings."""
 from .features import compose, compute_centroids
 from .model import PRETRAINED, CytokineClassifier, load_example, load_model, model_path, save_model
 from .predict import predict, predict_proba
