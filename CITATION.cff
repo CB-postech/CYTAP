@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite the CYTAP paper."
-title: "CYTAP: cytokine response prediction from adapted foundation model embeddings"
+title: "CYTAP"
 authors:
   - family-names: Jeong
     given-names: Yujin L.
