@@ -53,9 +53,10 @@ Model Non-Commercial License, as they derive from State embeddings (`MODEL_LICEN
 
 ## Citation
 
-Jeong, Y. L. & Kim, J. K. *CYTAP: inferring cytokine responses in single cells from adapted foundation model
-embeddings* (2026; journal and DOI to be added).
+Jeong, Y. L. & Kim, J. K. *Task-aligned foundation model representations enable single-cell cytokine response 
+inference* (2026; journal and DOI to be added).
 
 Adduri, A. K. et al. *Predicting cellular responses to perturbation across diverse contexts with State.*
-Cell 189, 5914–5931.e20 (2026). For counterfactual controls also cite Bunne, Stark et al., *Learning
-single-cell perturbation responses using neural optimal transport*, Nat. Methods 20, 1759–1768 (2023).
+Cell 189, 5914–5931.e20 (2026). 
+For counterfactual controls also cite Bunne, Stark et al., *Learning single-cell perturbation responses using 
+neural optimal transport*, Nat. Methods 20, 1759–1768 (2023).
