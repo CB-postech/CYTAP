@@ -26,7 +26,7 @@ Model used: State SE-600M (Hugging Face `arcinstitute/SE-600M`; folder with `con
 
 ## 3. Citation
 
-When using or redistributing the CYTAP weights or outputs, cite CYTAP (Jeong, Y. L. & Kim, J. K. *CYTAP: inferring cytokine responses in single cells from adapted foundation model embeddings* (2026; journal and DOI to be added)) and State:
+When using or redistributing the CYTAP weights or outputs, cite CYTAP (Jeong, Y. L. & Kim, J. K. *Task-aligned foundation model representations enable single-cell cytokine response inference* (2026; journal and DOI to be added)) and State:
 
 Adduri, A. K. et al. Predicting cellular responses to perturbation across diverse contexts with State.
 Cell 189, 5914–5931.e20 (2026). https://doi.org/10.1016/j.cell.2026.07.052
